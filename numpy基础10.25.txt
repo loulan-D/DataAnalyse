@@ -1,0 +1,46 @@
+1.编译源代码：
+->使用git获取numpy的源代码：
+git clone git://github.com/numpy/numpy.git numpy
+->将numpy安装到/usr/local:
+python setup.py build
+sudo python setup.py install --prefix=/usr/local
+需要GCC和python开发者包（python-dev or python-devel ），然后才可读源代码进行编译
+2.sys库的使用
+3.Ipython：
+Tab键自动补全
+使用%run命令调用外部python脚本
+pylab模式
+----------------------------
+ipython的一些基本命令：
+pylab   模式,在pylab模式下，ipython自动导入Scipy、Numpy、Matplotlib模块
+%logstart        保存会话
+%run的 -d参数开启ipdb调试器  键入c，脚本开始执行
+%run的-p参数对脚本进行性能分析
+%hist查看命令行历史记录
+arange？在函数名后面加上？可以查看帮组文档
+-----------------------------------
+4.复数不能转化为整数；复数也不能转化为浮点数。但是浮点数可以转化为复数
+5.数据类型对象：是numpy.dtype类的实例
+单个数据元素在内存中占用的字节数
+a.dtype.itemsize
+6.完整的numpy数据类型列表:sctypeDict.keys()
+-----------------------------------------------------------------------
+重点：
+创建自定义数据类型：
+自定义数据类型是一种异构数据类型，可以当作用来记录电子表格或数据库中一行数据的结构。
+eg：
+用一个长度为40的字符串记录商品名称、32位的整数记录商品的库存数量、记录价格
+t = dtype([('name', str_, 40),('numitems',int32),('price',float32)])
+查看数据类型：
+t['name']
+用array函数创建数组
+itemz = array([('meaning of life dvd',42,3.14),('butter',13,2.72)],dtype = t)
+itemz[1]
+------------------------------------------------------------------------
+7.可以使用负数下标翻转数组
+ a = arange(9)
+a[::-1]
+-------------------------------------------------------------------------
+8.切片和索引时，多个冒号可以用省略号(...)来代替
+b[0,:,:]  ==  b[0,...]
+-------------------------------
