@@ -1,0 +1,508 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec 30 11:23:54 2017
+
+@author: loulan
+"""
+
+import pandas as pd
+import numpy as np
+import os
+import time
+from openpyxl import Workbook           #  csv to xlsx   from stackoverflow
+import csv                              #  csv to xlsx   from stackoverflow
+import matplotlib.pyplot as plt
+
+"""
+2017年12.30终于完成了食堂数据分析的任务，以这个任务结束2017，迎接2018年新的开始。
+原始数据：11级、12级学生大学四年在校食堂消费数据，每天的每顿饭的流水金额与流水时间。
+需求： 要求统计出学生月平均消费数据，统计成如下的格式，另外求出学生每月的消费金额的平均数、中位数、截断均值。最后以图表的形式直观的表示
+姓名    学号    2011年11午   2011年12午   2012年1午   2012年3午 ........
+****   123     1              2           3            4    ........
+****   123     1              2           3            4    ........
+
+整个小项目是分析 相同学生大学四年 食堂消费、成绩、网络缴费的相关性。 我主要负责食堂消费数据的分析。
+通过这个实例，实践应用了python语言的基础知识，学习了numpy  pandas  matplotlib 第三方科学计算库的基本使用，为接下来学习机器学习打下了
+一定的基础。 
+另外浅显地理解了之前在网上看到的编程三步走“1.read the error ; 2. search google ; 3. ask for help ” 
+纸上得来终觉浅，觉知此事要躬行。
+
+问题： 函数的复用性， 函数不够健壮。
+"""
+
+"""
+# 设置时间作为索引    原始数据是20151202133025 这样的格式， 为了检索方便，转化为datatime格式并将时间列作为索引。
+def setTimeAsIndex(path):
+    f = pd.read_csv(path,encoding = 'utf-8')
+    f['流水时间'] = f['流水时间'].to_frame().applymap(np.int64)
+    f['流水时间'] = f['流水时间'].apply(lambda x: pd.to_datetime(str(x), format='%Y%m%d%H%M%S'))
+    f = f.set_index('流水时间')
+    path1 = r"D:\task\houqinnews\shitangsj1.csv"
+    f.to_csv(path1,encoding = 'utf-8')         # 新的文件，索引为日期列
+    return path1
+path = r"D:\task\houqinnews\shitangsj.csv"
+"""
+
+"""
+# 首先把每一年的数据分别保存到不同的文件中，后续分开处理  所有的年数据保存到yeardata文件夹中
+def differYearOfShiTang(path):
+    f = pd.read_csv(path,encoding = 'utf-8')
+    f['流水时间'] = pd.to_datetime(f['流水时间'])
+    f = f.set_index('流水时间')
+    os.mkdir(r"D:\task\houqinnews\yeardata")    # 分开的每月的数据保存到这个文件夹中
+    for i in [2011,2012,2013,2014,2015,2016]:
+        years = f[str(i)].index.tolist()
+        data =f.loc[years]
+        data.to_csv(r"D:\task\houqinnews\yeardata\data{}year.csv".format(i),encoding = 'utf-8')
+path = r"D:\task\houqinnews\shitangsj1.csv"
+differYearOfShiTang(path)
+"""
+
+
+"""
+# 依据原始数据约定 ：午饭时间段为：11：30--1：30    早饭时间段为：6：00--9：00（其实实际是7：30到8点：30左右）  晚饭时间段为：17：00到19：30
+# 分离出每一月中午的消费数据
+def differYear(year):      
+    path = r"D:\task\houqinnews\yeardata\data{}year.csv".format(year)
+    f = pd.read_csv(path,encoding = 'utf-8')
+    f['流水时间'] = pd.to_datetime(f['流水时间'])
+    f = f.set_index('流水时间')
+    for month in [1,3,4,5,6,9,10,11,12]:
+        xuehaoResult = []
+        moneyResultZhong = []
+        xingmingResult = []
+        days = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]  
+        for day in days:
+            xuehao = f['{}-{}-{} 11:30:00'.format(year,month,day):'{}-{}-{} 13:30:00'.format(year,month,day)]['学号'].to_frame()
+            xingming =f['{}-{}-{} 11:30:00'.format(year,month,day):'{}-{}-{} 13:30:00'.format(year,month,day)]['本方户名'].to_frame() 
+            moneyzhong = f['{}-{}-{} 11:30:00'.format(year,month,day):'{}-{}-{} 13:30:00'.format(year,month,day)]['交易额'].abs().to_frame()
+            moneyResultZhong.append(moneyzhong)
+            xuehaoResult.append(xuehao)
+            xingmingResult.append(xingming)
+        xuehaoresult = pd.concat(xuehaoResult)
+        moneyresultzhong = pd.concat(moneyResultZhong)
+        xingresult = pd.concat(xingmingResult)
+        result = pd.concat([xingresult,xuehaoresult,moneyresultzhong],axis = 1,join = 'outer')
+        result.to_csv(r"D:\task\houqinnews\{}monthdata\data{}year{}month.csv".format(year,year,month),encoding = 'utf-8')
+for year in [2011,2012,2013,2014,2015,2016]:  #
+    print("正在处理{}的数据.....".format(year))
+    os.mkdir(r"D:\task\houqinnews\{}monthdata".format(year))
+    differYear(year)         # 直接传参   每一年不同月的午餐数据  2011  2012  2013  2014  2015   2016 
+    time.sleep(4)
+    print("已处理完{}年的数据".format(year))
+"""
+
+
+"""
+#  删除重复的行  ，python 去重函数
+# DataFrame  f.duplicated() 返回布尔型的Series ，判断是否有重复行
+# DataFrame f.drop_duplicates()   删除重复的行
+# 求和，将每天中午的消费求和，因为有些同学，在同一个时间段内可能刷多次卡，而刷的这几次卡只能算是一顿饭
+def moneysum(year):
+    os.mkdir(r"D:\task\houqinnews\moneysum\{}moneysum".format(year))
+    paths = r"D:\task\houqinnews\{}monthdata".format(year)
+    files = os.listdir(paths)     #  10month ,11month,12month, 1month,3month,4month,5month,6month,9month
+    for file in files:
+        path = os.path.join(paths,file)
+        f = pd.read_csv(path,encoding = "utf-8")
+        f1 = f.drop_duplicates()
+        f1['流水时间'] = pd.to_datetime(f1['流水时间'])
+        f1 = f1.set_index('流水时间')
+        f1['流水时间'] = f1.index.date
+        f1.index = f1['流水时间']
+        money1 = f1['交易额'].groupby([f1['本方户名'],f1['学号'],f1['流水时间']]).sum().to_frame()
+        money = money1.reset_index()
+        path1 = os.path.join(r"D:\task\houqinnews\moneysum\{}moneysum".format(year),file)
+        money.to_csv(path1,encoding = "utf-8")
+for year in [2011,2012,2013,2014,2015,2016]:
+    print("正在处理{}年的数据".format(year))
+    moneysum(year)    
+    print("已处理完{}年的数据".format(year))
+"""
+
+
+"""
+# 求出月平均消费记录
+def money_mean(year,month):
+    path = r"D:\task\houqinnews\moneysum\{}moneysum\data{}year{}month.csv".format(year,year,month)
+    df = pd.read_csv(path,encoding = "utf-8")
+    mean1 = df['交易额'].groupby([df['本方户名'],df['学号']]).median().to_frame()
+    mean = mean1.reset_index()
+    mean.to_csv(r"D:\task\houqinnews\moneymedian\{}moneymedian\{}year{}monthmedian.csv".format(year,year,month),encoding = "utf-8",float_format = '%.3f')
+def main():
+    for year in [2011,2012,2013,2014,2015,2016]:
+        if year == 2011:
+            for month in [11,12]:
+                money_mean(year,month)
+        elif year == 2016:
+            for month in [1,3,4,5]:
+                money_mean(year,month)
+        else:
+            for month in [1,3,4,5,6,9,10,11,12]:
+                money_mean(year,month)   
+if __name__ == '__main__':
+    main()
+"""
+
+
+"""
+# 合并 中午消费数据
+# 2011年   11  /  12
+# 2012 2013 2014 2015  /10  /11  /12  /1  /3  /4  /5  /6  /9
+#                       0   1    2    3    4  5   6   7    8
+def year_final(year):  
+    path1 = r"D:\task\houqinnews\moneymedian\{}moneymedian".format(year)    # dinner
+    filelist = os.listdir(path1)
+    money = []
+    for file in filelist:     # file :  2011year11monthmedian.csv
+        path = os.path.join(path1,file)
+        f = pd.read_csv(path,encoding = 'utf-8')
+        money.append(f['交易额'].groupby([f['本方户名'],f['学号']]).sum().to_frame())
+    result = pd.concat([money[3],money[4],money[5],money[6],money[7],money[8],money[0],money[1],money[2]],axis = 1,join = 'outer')
+    result = result.fillna(0)
+    result.columns = ['{}年1月午'.format(year),'{}年3月午'.format(year),'{}年4月午'.format(year),'{}年5月午'.format(year),'{}年6月午'.format(year),'{}年9月午'.format(year),'{}年10月午'.format(year),'{}年11月午'.format(year),'{}年12月午'.format(year)]
+    result.to_csv(r"D:\task\houqinnews\yearfinal\{}final.csv".format(year),encoding = "utf-8",float_format = '%.3f')
+for year in [2011,2012,2013,2014,2015,2016]:# 
+    if year == 2011:
+        path1 = r"D:\task\houqinnews\moneymedian\{}moneymedian".format(year)
+        filelist = os.listdir(path1)
+        money = []
+        for file in filelist:     # file 11 / 12
+            path = os.path.join(path1,file)
+            f = pd.read_csv(path,encoding = "utf-8")
+            money.append(f['交易额'].groupby([f['本方户名'],f['学号']]).sum().to_frame())
+        result = pd.concat([money[0],money[1]],axis = 1,join = 'outer')
+        result = result.fillna(0)
+        result.columns = ['{}年11月午'.format(year),'{}年12月午'.format(year)]
+        result.to_csv(r"D:\task\houqinnews\yearfinal\{}final.csv".format(year),encoding = "utf-8",float_format = '%.3f')
+        print("已完成{}年的数据".format(year))
+    elif year == 2016:
+        path1 = r"D:\task\houqinnews\moneymedian\{}moneymedian".format(year)
+        filelist = os.listdir(path1)
+        money = []
+        for file in filelist:     # file 1  3  4  5
+            path = os.path.join(path1,file)
+            f = pd.read_csv(path,encoding = "utf-8")
+            money.append(f['交易额'].groupby([f['本方户名'],f['学号']]).sum().to_frame())
+        result = pd.concat([money[0],money[1],money[2],money[3]],axis = 1,join = 'outer')
+        result = result.fillna(0)
+        result.columns = ['{}年1月午'.format(year),'{}年3月午'.format(year),'{}年4月午'.format(year),'{}年5月午'.format(year)]
+        result.to_csv(r"D:\task\houqinnews\yearfinal\{}final.csv".format(year),encoding = "utf-8",float_format = '%.3f')
+        print("已完成{}年的数据".format(year))
+    else:
+        year_final(year)            #  2012  2013  2014  2015
+        print("已完成{}年的数据".format(year))
+"""
+
+
+"""
+# csv convert to xlsx 
+# 将前面生成的csv格式的文件转化为xlsx格式  
+def csvToXlsx(year):
+    wb = Workbook()
+    ws = wb.active
+    with open(r"D:\task\houqinnews\yearfinal\{}final.csv".format(year),'r',encoding = 'utf-8') as f:   # dinner
+        for row in csv.reader(f):
+            ws.append(row)
+    wb.save(r"D:\task\houqinnews\yearfinals\{}final.xlsx".format(year))    #dinner
+years = [2011,2012,2013,2014,2015,2016]
+os.mkdir(r"D:\task\houqinnews\yearfinals")     # dinner
+for year in years:
+    csvToXlsx(year)
+"""   
+
+    
+"""
+def finalResult(path):    
+    pathfiles = []   # 11   12  13  14  15 16
+    for file in path:       # 2011finals.xlsx
+        pathfile = os.path.join(r"D:\task\houqinnews\yearfinals",file)
+        pathfiles.append(pathfile)
+    f1 = pd.read_excel(pathfiles[0])
+    f2 = pd.read_excel(pathfiles[1])
+    result1 = pd.merge(f1,f2,how = 'outer')
+    result1.to_excel(r"D:\task\houqinnews\yearfinalresult\resutl1.xlsx")
+    
+    f3 = pd.read_excel(pathfiles[2],encoding = "utf-8")
+    f4 = pd.read_excel(r"D:\task\houqinnews\yearfinalresult\resutl1.xlsx")
+    result2 = pd.merge(f4,f3,how = 'outer')
+    result2.to_excel(r"D:\task\houqinnews\yearfinalresult\resutl2.xlsx")
+    
+    f5 = pd.read_excel(pathfiles[3],encoding = "utf-8")
+    f6 = pd.read_excel(r"D:\task\houqinnews\yearfinalresult\resutl2.xlsx")
+    result3 = pd.merge(f6,f5,how = 'outer')
+    result3.to_excel(r"D:\task\houqinnews\yearfinalresult\resutl3.xlsx")
+    
+    f7 = pd.read_excel(pathfiles[4],encoding = "utf-8")
+    f8 = pd.read_excel(r"D:\task\houqinnews\yearfinalresult\resutl3.xlsx")
+    result4 = pd.merge(f8,f7,how = 'outer')
+    result4.to_excel(r"D:\task\houqinnews\yearfinalresult\resutl4.xlsx")
+    
+    f9 = pd.read_excel(pathfiles[5],encoding = "utf-8")
+    f10 = pd.read_excel(r"D:\task\houqinnews\yearfinalresult\resutl4.xlsx")
+    result5 = pd.merge(f10,f9,how ='outer')
+    result5.to_excel(r"D:\task\houqinnews\finalmedian.xlsx")
+path = r"D:\task\houqinnews\yearfinals"    # dinner
+paths = os.listdir(path)     #2011 2012 2013 2014 2015 2016
+finalResult(paths)
+"""
+
+
+"""
+# fill the zero items
+def fillnas(path):
+    f = pd.read_excel(path,encoding = "utf-8")
+    f = f.fillna(0)
+    f.to_excel(path,encoding = "utf-8")
+path = r"D:\task\houqinnews\finalmedian.xlsx"
+fillnas(path)
+"""
+
+
+
+""" 
+# 画图函数， 通过输入学号可以生成学上大学四年食堂消费数据的统计图，包括中位数、平均数、截断均值、和三个评价标准的比较图
+def draw_subpic(f,a,select):
+    xhindex = f[f['学号']=='{}'.format(a)].index.tolist()[0]
+        
+    fig = plt.figure(figsize = (12,12))
+    if int(select) ==1:
+        fig.suptitle("{}大学四年的食堂消费数据统计图(平均数)({})".format(f.iat[xhindex,0][0],a))
+    elif int(select) ==2:
+        fig.suptitle("{}同学大学四年的食堂消费数据统计图(中位数)({})".format(f.iat[xhindex,0],a))
+    elif int(select) ==3:
+        fig.suptitle("{}同学大学四年的食堂消费数据统计图(截断均值)({})".format(f.iat[xhindex,0],a))
+        
+    ax1 = plt.subplot(221)
+    value = [f.iat[xhindex,2],f.iat[xhindex,3],f.iat[xhindex,4],f.iat[xhindex,5],f.iat[xhindex,6],f.iat[xhindex,7],f.iat[xhindex,8]]
+    print(value)
+    index  = [1,2,3,4,5,6,7]
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('11Y11M','11Y12M','12Y1M','12Y3M','12Y4M','12Y5M','12Y6M'))
+    for c,b in zip(index,value):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(index,value,width = 0.6,color = 'y',label ='月平均' )
+    plt.xlabel(u'大一学年2011-2012')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'大一学年的消费数据(午)')
+    plt.legend()
+        
+        
+    ax2 = plt.subplot(222)
+    value = [f.iat[xhindex,9],f.iat[xhindex,10],f.iat[xhindex,11],f.iat[xhindex,12],f.iat[xhindex,13],f.iat[xhindex,14],f.iat[xhindex,15],f.iat[xhindex,16],f.iat[xhindex,17]]
+    print(value)
+    index  = [1,2,3,4,5,6,7,8,9]
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('12Y9M','12Y10M','12Y11M','12Y12M','13Y1M','13Y3M','13Y4M','13Y5M','13Y6M'))
+    for c,b in zip(index,value):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(index,value,width = 0.6,color = 'g',label ='月平均' )
+    plt.xlabel(u'大二学年2012-2013')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'大二学年的消费数据(午)')
+    plt.legend()
+    
+        
+    ax3 = plt.subplot(223)
+    value = [f.iat[xhindex,18],f.iat[xhindex,19],f.iat[xhindex,20],f.iat[xhindex,21],f.iat[xhindex,22],f.iat[xhindex,23],f.iat[xhindex,24],f.iat[xhindex,25],f.iat[xhindex,26]]
+    print(value)
+    index  = [1,2,3,4,5,6,7,8,9]
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('13Y9M','13Y10M','13Y11M','13Y12M','14Y1M','14Y3M','14Y4M','14Y5M','14Y6M'))
+    for c,b in zip(index,value):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(index,value,width = 0.6,color = 'darkslateblue',label ='月平均' )
+    plt.xlabel(u'大三学年2013-2014')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'大三学年的消费数据(午)')
+    plt.legend()
+        
+        
+    ax4 = plt.subplot(224)
+    value = [f.iat[xhindex,27],f.iat[xhindex,28],f.iat[xhindex,29],f.iat[xhindex,30],f.iat[xhindex,31],f.iat[xhindex,32],f.iat[xhindex,33],f.iat[xhindex,34],f.iat[xhindex,35]]
+    print(value)
+    index  = [1,2,3,4,5,6,7,8,9]
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('14Y9M','14Y10M','14Y11M','14Y12M','15Y1M','15Y3M','15Y4M','15Y5M','15Y6M'))
+    for c,b in zip(index,value):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(index,value,width = 0.6,color = 'b',label ='月平均' )
+    plt.xlabel(u'大四学年2014-2015')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'大四学年的消费数据(午)')
+    plt.legend()
+    if int(select)==1:
+        plt.savefig(r"D:\task\houqinnew\images\{}mean.jpg".format(a),dpi = 600)
+    elif int(select) ==2:
+        plt.savefig(r"D:\task\houqinnew\images\{}median.jpg".format(a),dpi = 600)
+    elif int(select) ==3:
+        plt.savefig(r"D:\task\houqinnew\images\{}trimmed.jpg".format(a),dpi = 600)
+       
+    plt.show()
+    
+
+def draw_picture(a,select):
+    plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
+    plt.rcParams['axes.unicode_minus']=False #用来正常显示负号
+    if int(select) == 1:
+        pmean = r"D:\task\houqinnew\finalresultmean.xlsx"
+        f = pd.read_excel(pmean,encoding = "utf-8")
+        draw_subpic(f,a,select)
+    elif int(select) ==2:
+        pmedian = r"D:\task\houqinnew\finalresultmedian.xlsx"
+        f = pd.read_excel(pmedian,encoding = "utf-8")
+        draw_subpic(f,a,select)
+    elif int(select) ==3:
+        ptrimmed = r"D:\task\houqinnew\finalresulttrimmed.xlsx"
+        f = pd.read_excel(ptrimmed,encoding = "utf-8")
+        draw_subpic(f,a,select)
+        
+    elif int(select) ==4:
+        pmean = r"D:\task\houqinnew\finalresultmean.xlsx"
+        pmedian = r"D:\task\houqinnew\finalresultmedian.xlsx"
+        ptrimmed = r"D:\task\houqinnew\finalresulttrimmed.xlsx"
+        fmean = pd.read_excel(pmean,encoding = "utf-8")
+        fmedian = pd.read_excel(pmedian,encoding = "utf-8")
+        ftrimmed = pd.read_excel(ptrimmed,encoding = "utf-8")
+        mean_compar_median_trim(fmean,fmedian,ftrimmed,a)
+        
+        
+def mean_compar_median_trim(fmean,fmedian,ftrimmed,a):
+    xhindex = fmean[fmean['学号']=='{}'.format(a)].index.tolist()[0] 
+    fig = plt.figure(figsize  =(16,16))
+    fig.suptitle("{}大学四年的食堂消费数据平均值|中位数|截断均值比较统计图({})".format(fmean.iat[xhindex,0],a))
+    
+    plt.subplot(221)
+    meanvalue = [fmean.iat[xhindex,2],fmean.iat[xhindex,3],fmean.iat[xhindex,4],fmean.iat[xhindex,5],fmean.iat[xhindex,6],fmean.iat[xhindex,7],fmean.iat[xhindex,8]]
+    print(meanvalue)
+    medianvalue = [fmedian.iat[xhindex,2],fmedian.iat[xhindex,3],fmedian.iat[xhindex,4],fmedian.iat[xhindex,5],fmedian.iat[xhindex,6],fmedian.iat[xhindex,7],fmedian.iat[xhindex,8]]
+    print(medianvalue)
+    trimmedvalue = [ftrimmed.iat[xhindex,2],ftrimmed.iat[xhindex,3],ftrimmed.iat[xhindex,4],ftrimmed.iat[xhindex,5],ftrimmed.iat[xhindex,6],ftrimmed.iat[xhindex,7],ftrimmed.iat[xhindex,8]]
+    print(trimmedvalue)
+    meanindex  = [1,2,3,4,5,6,7]
+    medianindex = [1.3,2.3,3.3,4.3,5.3,6.3,7.3]
+    trimmedindex = [1.6,2.6,3.6,4.6,5.6,6.6,7.6]
+    index = [1.3,2.3,3.3,4.3,5.3,6.3,7.3]
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('11Y11M','11Y12M','12Y1M','12Y3M','12Y4M','12Y5M','12Y6M'))
+    for c,b in zip(meanindex,meanvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(medianindex,medianvalue):
+        plt.text(c, b+0.06, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(trimmedindex,trimmedvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(meanindex,meanvalue,width = 0.3,color = 'y',label ='平均数' )
+    plt.bar(medianindex,medianvalue,width = 0.3,color = 'g',label = '中位数')
+    plt.bar(trimmedindex,trimmedvalue,width = 0.3,color = 'r',label = '截断均值')
+    plt.xlabel(u'大一学年2011-2012')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'{}大一学年的食堂消费数据比较(午)({})'.format(fmean.iat[xhindex,0],a))
+    plt.legend()
+    
+    plt.subplot(222)
+    meanvalue = [fmean.iat[xhindex,9],fmean.iat[xhindex,10],fmean.iat[xhindex,11],fmean.iat[xhindex,12],fmean.iat[xhindex,13],fmean.iat[xhindex,14],fmean.iat[xhindex,15],fmean.iat[xhindex,16],fmean.iat[xhindex,17]]
+    print(meanvalue)
+    medianvalue = [fmedian.iat[xhindex,9],fmedian.iat[xhindex,10],fmedian.iat[xhindex,11],fmedian.iat[xhindex,12],fmedian.iat[xhindex,13],fmedian.iat[xhindex,14],fmedian.iat[xhindex,15],fmedian.iat[xhindex,16],fmedian.iat[xhindex,17]]
+    print(medianvalue)
+    trimmedvalue = [ftrimmed.iat[xhindex,9],ftrimmed.iat[xhindex,10],ftrimmed.iat[xhindex,11],ftrimmed.iat[xhindex,12],ftrimmed.iat[xhindex,13],ftrimmed.iat[xhindex,14],ftrimmed.iat[xhindex,15],ftrimmed.iat[xhindex,16],ftrimmed.iat[xhindex,17]]
+    print(trimmedvalue)
+    meanindex  = [1,2,3,4,5,6,7,8,9]
+    medianindex = [1.3,2.3,3.3,4.3,5.3,6.3,7.3,8.3,9.3]
+    trimmedindex = [1.6,2.6,3.6,4.6,5.6,6.6,7.6,8.6,9.6]
+    index = [1.3,2.3,3.3,4.3,5.3,6.3,7.3,8.3,9.3]
+    
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('12Y9M','12Y10M','12Y11M','12Y12M','13Y1M','13Y3M','13Y4M','13Y5M','13Y6M'))
+    for c,b in zip(meanindex,meanvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(medianindex,medianvalue):
+        plt.text(c, b+0.06, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(trimmedindex,trimmedvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(meanindex,meanvalue,width = 0.3,color = 'y',label ='平均数' )
+    plt.bar(medianindex,medianvalue,width = 0.3,color = 'g',label = '中位数')
+    plt.bar(trimmedindex,trimmedvalue,width = 0.3,color = 'r',label = '截断均值')
+    plt.xlabel(u'大二学年2012-2013')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'{}大二学年的食堂消费数据比较(午)({})'.format(fmean.iat[xhindex,0],a))
+    plt.legend()
+    
+    
+    plt.subplot(223)
+    meanvalue = [fmean.iat[xhindex,18],fmean.iat[xhindex,19],fmean.iat[xhindex,20],fmean.iat[xhindex,21],fmean.iat[xhindex,22],fmean.iat[xhindex,23],fmean.iat[xhindex,24],fmean.iat[xhindex,25],fmean.iat[xhindex,26]]
+    print(meanvalue)
+    medianvalue = [fmedian.iat[xhindex,18],fmedian.iat[xhindex,19],fmedian.iat[xhindex,20],fmedian.iat[xhindex,21],fmedian.iat[xhindex,22],fmedian.iat[xhindex,23],fmedian.iat[xhindex,24],fmedian.iat[xhindex,25],fmedian.iat[xhindex,26]]
+    print(medianvalue)
+    trimmedvalue = [ftrimmed.iat[xhindex,18],ftrimmed.iat[xhindex,19],ftrimmed.iat[xhindex,20],ftrimmed.iat[xhindex,21],ftrimmed.iat[xhindex,22],ftrimmed.iat[xhindex,23],ftrimmed.iat[xhindex,24],ftrimmed.iat[xhindex,25],ftrimmed.iat[xhindex,26]]
+    print(trimmedvalue)
+    meanindex  = [1,2,3,4,5,6,7,8,9]
+    medianindex = [1.3,2.3,3.3,4.3,5.3,6.3,7.3,8.3,9.3]
+    trimmedindex = [1.6,2.6,3.6,4.6,5.6,6.6,7.6,8.6,9.6]
+    index = [1.3,2.3,3.3,4.3,5.3,6.3,7.3,8.3,9.3]
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('13Y9M','13Y10M','13Y11M','13Y12M','14Y1M','14Y3M','14Y4M','14Y5M','14Y6M'))
+    for c,b in zip(meanindex,meanvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(medianindex,medianvalue):
+        plt.text(c, b+0.06, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(trimmedindex,trimmedvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(meanindex,meanvalue,width = 0.3,color = 'y',label ='平均数' )
+    plt.bar(medianindex,medianvalue,width = 0.3,color = 'g',label = '中位数')
+    plt.bar(trimmedindex,trimmedvalue,width = 0.3,color = 'r',label = '截断均值')
+    plt.xlabel(u'大三学年2013-2014')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'{}大三学年的食堂消费数据比较(午)({})'.format(fmean.iat[xhindex,0],a))
+    plt.legend()
+    
+    
+    plt.subplot(224)
+    meanvalue = [fmean.iat[xhindex,27],fmean.iat[xhindex,28],fmean.iat[xhindex,29],fmean.iat[xhindex,30],fmean.iat[xhindex,31],fmean.iat[xhindex,32],fmean.iat[xhindex,33],fmean.iat[xhindex,34],fmean.iat[xhindex,35]]
+    print(meanvalue)
+    medianvalue = [fmedian.iat[xhindex,27],fmedian.iat[xhindex,28],fmedian.iat[xhindex,29],fmedian.iat[xhindex,30],fmedian.iat[xhindex,31],fmedian.iat[xhindex,32],fmedian.iat[xhindex,33],fmedian.iat[xhindex,34],fmedian.iat[xhindex,35]]
+    print(medianvalue)
+    trimmedvalue = [ftrimmed.iat[xhindex,27],ftrimmed.iat[xhindex,28],ftrimmed.iat[xhindex,29],ftrimmed.iat[xhindex,30],ftrimmed.iat[xhindex,31],ftrimmed.iat[xhindex,32],ftrimmed.iat[xhindex,33],ftrimmed.iat[xhindex,34],ftrimmed.iat[xhindex,35]]
+    print(trimmedvalue)
+    meanindex  = [1,2,3,4,5,6,7,8,9]
+    medianindex = [1.3,2.3,3.3,4.3,5.3,6.3,7.3,8.3,9.3]
+    trimmedindex = [1.6,2.6,3.6,4.6,5.6,6.6,7.6,8.6,9.6]
+    index = [1.3,2.3,3.3,4.3,5.3,6.3,7.3,8.3,9.3]
+    ax1 = plt.gca()
+    ax1.set_xticks(index)
+    ax1.set_xticklabels(('14Y9M','14Y10M','14Y11M','14Y12M','15Y1M','15Y3M','15Y4M','15Y5M','15Y6M'))
+    for c,b in zip(meanindex,meanvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(medianindex,medianvalue):
+        plt.text(c, b+0.06, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    for c,b in zip(trimmedindex,trimmedvalue):
+        plt.text(c, b+0.05, '%.2f' % b, ha='center', va= 'bottom',fontsize=10)
+    plt.bar(meanindex,meanvalue,width = 0.3,color = 'y',label ='平均数' )
+    plt.bar(medianindex,medianvalue,width = 0.3,color = 'g',label = '中位数')
+    plt.bar(trimmedindex,trimmedvalue,width = 0.3,color = 'r',label = '截断均值')
+    plt.xlabel(u'大四学年2014-2015')
+    plt.ylabel(u'月平均消费(元)')
+    plt.title(u'{}大四学年的食堂消费数据比较(午)({})'.format(fmean.iat[xhindex,0],a))
+    plt.legend()
+    
+    plt.savefig(r"D:\task\houqinnew\images\{}.jpg".format(a),dpi=600)
+    plt.show()
+
+
+
+if __name__== '__main__':
+    print("--> 1:基于 平均数 得出的月平均消费统计图")
+    print("--> 2:基于 中位数 得出的月平均消费统计图")
+    print("--> 3:基于 截断均值 得出的月平均消费统计图")
+    print("--> 4:基于 中位数|平均数|截断均值 得出的月消费比较图")
+    xh = input("请输入你要查询的学号")
+    select = input("请输入你要查询的图例选（1|2|3|4）")
+    draw_picture(xh,select)
+"""
+
