@@ -67,42 +67,5 @@ print("pythonsum slapsed time in microseconds {}".format(time1.microseconds))
 start2 = datetime.now()
 numpysum(n)
 time2 = datetime.now() - start2
-print("numpysum slapsed time in microseconds {}".format(time2.microseconds))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+print("numpysum slapsed time in microseconds {}".format(time2.microseconds)
+      
